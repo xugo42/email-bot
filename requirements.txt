@@ -1,0 +1,4 @@
+imapclient
+requests
+pystray
+pillow

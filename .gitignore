@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 运行时数据（不提交）
+机器人日志.txt
+已处理.txt
+邮箱账号密码.txt
+
+# 编辑器
+.idea/
+.vscode/
+
+# 日志
+*.log
