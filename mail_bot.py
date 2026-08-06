@@ -84,7 +84,7 @@ def get_body(msg):
 
 
 def parse_command(subject, body):
-    """从标题+正文解析指令。返回 (cmd, arg)，cmd ∈ {find, download, ask, list, help}。"""
+    """从标题+正文解析指令。返回 (cmd, arg)，cmd ∈ {find, download, ask, more, list, help}。"""
     text = subject.strip() + " " + body.strip()
     first_line = text.splitlines()[0][:500] if text else ""
     first_line = re.sub(r"\s+", " ", first_line)
@@ -100,6 +100,9 @@ def parse_command(subject, body):
     m = re.search(r"(?:列|目录|ls)\s*[:：]?\s*(.+)", first_line)
     if m:
         return "list", m.group(1).strip()
+    m = re.search(r"(?:更多|下一页|more)\s*[:：]?\s*(\d*)", first_line)
+    if m:
+        return "more", m.group(1) or "2"
     if "帮助" in first_line or "help" in first_line.lower():
         return "help", ""
     return None, None
@@ -114,12 +117,14 @@ def build_help_text():
         "2. 找最新：写「找 扩展名」\n"
         "   例：找 docx\n"
         "3. 取文件：先收到清单，再写「发 序号」\n"
-        "   例：发 1  或  发 1,3\n"
-        "4. 问 AI：写「问 问题」\n"
+        "   例：发 1  或  发 1,3  或  发 1 3 6（可多个）\n"
+        "4. 翻页：清单只显示前 15 个，想看更旧的写「更多 页码」\n"
+        "   例：更多 2（看第 16-30 个）\n"
+        "5. 问 AI：写「问 问题」\n"
         "   例：问 帮我改一下这段话\n"
-        "5. 列目录：写「列 路径」\n"
+        "6. 列目录：写「列 路径」\n"
         "   例：列 C:/Users/<你的用户名>/Desktop\n"
-        "6. 帮助：写「帮助」\n\n"
+        "7. 帮助：写「帮助」\n\n"
         "注意：请新写邮件，不要在旧邮件上点「回复」。"
     )
 
@@ -214,7 +219,8 @@ def handle_find(to_addr, keyword):
 
     text = (f"找到 {len(found)} 个 {hint}，按修改时间从新到旧：\n\n"
             + "\n".join(lines)
-            + "\n\n回复「发 序号」获取完整文件，可一次多个（如：发 1,3）。\n"
+            + "\n\n回复「发 序号」获取文件，可一次多个（如：发 1,3  或  发 1 3 6）。\n"
+              "想看更旧的文件？回复「更多 2」翻页。\n"
               "注意：请新写一封邮件发指令，不要在旧邮件上点回复。")
     send_reply(to_addr, title, text)
 
@@ -296,6 +302,42 @@ def handle_list(to_addr, path):
         return
     text = f"目录内容（{path}）：\n\n" + "\n".join(entries)
     send_reply(to_addr, f"目录列表：{path}", text)
+
+
+PAGE_SIZE = 15  # 每页显示的文件数
+
+
+def handle_more(to_addr, arg):
+    """处理「更多」指令：翻页显示清单里更旧的文件（每页 15 个）。"""
+    log(f"指令：更多 「{arg}」")
+    results = LAST_RESULTS.get(to_addr, [])
+    if not results:
+        send_reply(to_addr, "请先搜索",
+                   "请先发「找 关键词」获得文件清单，再回复「更多 页码」翻页。")
+        return
+    try:
+        page = max(1, int(arg.strip())) if arg and arg.strip() else 2
+    except Exception:
+        page = 2
+    start = (page - 1) * PAGE_SIZE
+    if start >= len(results):
+        total_pages = (len(results) + PAGE_SIZE - 1) // PAGE_SIZE
+        send_reply(to_addr, "已到最后",
+                   f"共 {len(results)} 个文件、{total_pages} 页，第 {page} 页已超出范围。\n"
+                   f"回复「更多 {total_pages}」看最后一页。")
+        return
+    end = min(start + PAGE_SIZE, len(results))
+    lines = []
+    for i, p in enumerate(results[start:end], start + 1):
+        try:
+            size = os.path.getsize(p) / 1024
+        except Exception:
+            size = 0
+        lines.append(f"[{i}] {os.path.basename(p)}（{_fmt_time(_safe_mtime(p))}，{size:.0f} KB）")
+    text = (f"第 {page} 页（第 {start+1}-{end} 个，共 {len(results)} 个）：\n\n"
+            + "\n".join(lines)
+            + "\n\n回复「发 序号」获取文件，或「更多 页码」继续翻页。")
+    send_reply(to_addr, f"文件清单 第{page}页", text)
 
 
 CHAT_HISTORY = {}  # 发件人邮箱 -> 最近几轮的问答列表（对话记忆）
@@ -425,6 +467,8 @@ def poll_mailbox(processed):
                         handle_download(sender_addr, arg)
                     elif cmd == "ask":
                         handle_ask(sender_addr, arg)
+                    elif cmd == "more":
+                        handle_more(sender_addr, arg)
                     elif cmd == "list":
                         handle_list(sender_addr, arg)
                     mark_seen(server, uid)
