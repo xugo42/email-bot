@@ -1,11 +1,11 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 邮件自动取件机器人（方案 C）
 启动后常驻监听邮箱，收到你的指令邮件后自动在电脑上找文件并发回给你。
 
 指令格式（写在新邮件里，标题或正文均可）：
   找 <文件名关键词>        例：找 A05 论文
-  列 <文件夹路径>          例：列 C:/Users/<你的用户名>/Desktop
+  列 <文件夹路径>          例：列 C:/Users/用户id/Desktop
   帮助                     例：帮助
 
 运行环境：Windows + Python 3
@@ -134,7 +134,7 @@ def build_help_text():
         "5. 问 AI：写「问 问题」\n"
         "   例：问 帮我改一下这段话\n"
         "6. 列目录：写「列 路径」\n"
-        "   例：列 C:/Users/<你的用户名>/Desktop\n"
+        "   例：列 C:/Users/用户id/Desktop\n"
         "7. 帮助：写「帮助」\n\n"
         "注意：请新写邮件，不要在旧邮件上点「回复」。"
     )
@@ -210,7 +210,7 @@ def handle_find(to_addr, keyword):
     if not found:
         send_reply(to_addr, "没有找到",
                    f"没有在电脑上找到 {hint}。\n\n"
-                   f"可试试「列 C:/Users/<你的用户名>/Desktop」查看目录，"
+                   f"可试试「列 C:/Users/用户id/Desktop」查看目录，"
                    f"或换个关键词/扩展名再试（如：找 docx）。")
         return
 
@@ -309,7 +309,7 @@ def handle_list(to_addr, path):
     if entries is None:
         send_reply(to_addr, "目录不存在",
                    f"路径不存在或不是文件夹：\n{path}\n\n"
-                   f"请确认路径写法，例如：列 C:/Users/<你的用户名>/Desktop")
+                   f"请确认路径写法，例如：列 C:/Users/用户id/Desktop")
         return
     text = f"目录内容（{path}）：\n\n" + "\n".join(entries)
     send_reply(to_addr, f"目录列表：{path}", text)
