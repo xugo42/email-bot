@@ -1,7 +1,7 @@
 ﻿# 切换开机自启：当前开启 -> 关闭，当前关闭 -> 开启
 $startup = [Environment]::GetFolderPath('Startup')
 $lnk = Join-Path $startup 'MailBot.lnk'
-$bot = Join-Path $PSScriptRoot '启动机器人后台.bat'
+$bot = Join-Path $PSScriptRoot '启动邮件机器人后台.bat'
 if (Test-Path $lnk) {
     Remove-Item $lnk -Force
     Write-Host '已关闭开机自启'
