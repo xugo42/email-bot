@@ -387,7 +387,8 @@ def handle_ask(to_addr, question):
     try:
         messages = []
         if getattr(config, "AI_SYSTEM_PROMPT", ""):
-            messages.append({"role": "system", "content": config.AI_SYSTEM_PROMPT})
+            system_text = config.AI_SYSTEM_PROMPT + "\n\n以下是你的功能使用说明（帮助）：\n" + build_help_text()
+            messages.append({"role": "system", "content": system_text})
         history = CHAT_HISTORY.get(to_addr, [])
         messages.extend(history)
         messages.append({"role": "user", "content": question})
