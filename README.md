@@ -77,7 +77,7 @@ ALLOWED_SENDERS = "你的手机邮箱@example.com"  # 只有它能指挥机器�
 
 - **全盘秒搜**：安装 [Everything](https://www.voidtools.com/)（免费）并保持运行，即可全盘秒搜。`es.exe` 已随项目提供（`tools\ES\es.exe`），代码会自动探测，`config.py` 的 `ES_EXE` 留空即可。若未装 Everything，自动退回慢速搜索（能用但较慢）。es.exe 来自 [voidtools](https://www.voidtools.com/)
 - **AI 问答**：`config.py` 填 `DEEPSEEK_API_KEY`（DeepSeek 官网获取）；`AI_SYSTEM_PROMPT` 可自定义回答风格
-- **开机自启**：双击 `切换开机自启.bat`，点一下开、再点一下关
+- **点此切换开机自启动**：双击 `点此切换开机自启动.bat`，点一下开、再点一下关
 - **自定义托盘图标**：`config.py` 的 `TRAY_ICON_PATH` 填一张 64×64 图片路径
 - **实时看日志**：双击 `启动邮件机器人前台.bat`（黑窗口版）；日志写入 `机器人日志.txt`
 - ⚠️ **不要同时打开两个启动文件**：`启动邮件机器人后台.bat`（后台托盘）和 `启动邮件机器人前台.bat`（前台黑窗口）**只能开一个**——它们连的是同一个邮箱收信，同时开会**重复回复**。想切换时，先退掉当前那个（托盘右键「退出」 / 关闭黑窗口）
