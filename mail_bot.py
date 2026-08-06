@@ -228,9 +228,9 @@ def handle_download(to_addr, arg):
                    "请先发「找 关键词」获得文件清单，再回复「发 序号」取文件。")
         return
 
-    # 解析序号：支持 1、1,3、2-4
+    # 解析序号：支持 1、1,3、1 3 6、2-4（逗号/空格分隔，连字符表示范围）
     nums = []
-    for part in arg.replace("，", ",").replace(" ", "").split(","):
+    for part in re.split(r"[,，\s]+", arg):
         if not part:
             continue
         if "-" in part:
