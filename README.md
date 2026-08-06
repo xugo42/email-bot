@@ -1,5 +1,10 @@
 # 📬 邮件机器人（Mail Bot）
 
+> **Mail Bot** — Control your home PC via email. Send an email from your phone, and your PC finds files, sends them back, and answers your questions with AI.
+> **Features:** remote file fetch, latest-file search, multi-file send, AI chat (DeepSeek), background tray, auto-start, Everything instant search.
+>
+> 中文文档见下 ↓
+
 > 把电脑变成一个「邮箱遥控器」——人在外面，用手机发封邮件，就能让家里的电脑帮你**找文件、发文件、回答 AI 问题**。全程不需要微信、不需要额外软件。
 
 ## ✨ 功能

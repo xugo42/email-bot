@@ -21,6 +21,7 @@ from email.utils import formataddr
 import os
 import time
 import re
+import json
 import requests
 
 import sys
@@ -33,7 +34,17 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 # ---------------- 日志 ----------------
+LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "机器人日志.txt")
+
+
 def log(msg):
+    # 日志轮转：超过配置上限自动清空
+    try:
+        max_size = getattr(config, "LOG_MAX_SIZE", 0)
+        if max_size > 0 and os.path.isfile(LOG_PATH) and os.path.getsize(LOG_PATH) > max_size:
+            open(LOG_PATH, "w", encoding="utf-8").close()
+    except Exception:
+        pass
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
 
 
@@ -91,7 +102,7 @@ def parse_command(subject, body):
     m = re.search(r"(?:找|搜索|search)\s*[:：]?\s*(.+)", first_line)
     if m:
         return "find", m.group(1).strip()
-    m = re.search(r"(?:发|下载|要|send)\s*[:：]?\s*(.+)", first_line)
+    m = re.search(r"(?:发|下载|要|send)\s*[:：]?\s*([0-9\s,，\-]+)", first_line)
     if m:
         return "download", m.group(1).strip()
     m = re.search(r"(?:问|请问|ai)\s*[:：]?\s*(.+)", first_line)
@@ -340,7 +351,30 @@ def handle_more(to_addr, arg):
     send_reply(to_addr, f"文件清单 第{page}页", text)
 
 
-CHAT_HISTORY = {}  # 发件人邮箱 -> 最近几轮的问答列表（对话记忆）
+# 对话记忆持久化：存到项目目录的 AI记忆.json，重启后仍记得
+AI_MEMORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AI记忆.json")
+
+
+def _load_chat_history():
+    """从文件加载对话记忆。"""
+    try:
+        with open(AI_MEMORY_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return {k: v for k, v in data.items() if isinstance(v, list)}
+    except Exception:
+        return {}
+
+
+def _save_chat_history():
+    """保存对话记忆到文件。"""
+    try:
+        with open(AI_MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(CHAT_HISTORY, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+CHAT_HISTORY = _load_chat_history()  # 发件人邮箱 -> 最近几轮的问答列表
 
 
 def handle_ask(to_addr, question):
@@ -374,7 +408,7 @@ def handle_ask(to_addr, question):
             return
         answer = resp.json()["choices"][0]["message"]["content"]
 
-        # 记录本轮问答，按配置保留最近几轮
+        # 记录本轮问答：保留最近 N 轮，且总字数超限时自动修剪最旧对话
         turns = max(0, int(getattr(config, "CHAT_HISTORY_TURNS", 0)))
         if turns > 0:
             history.append({"role": "user", "content": question})
@@ -382,9 +416,18 @@ def handle_ask(to_addr, question):
             max_msgs = turns * 2
             if len(history) > max_msgs:
                 history = history[-max_msgs:]
+            max_chars = int(getattr(config, "AI_MEMORY_MAX_CHARS", 8000))
+            if max_chars > 0:
+                while len(history) >= 2:
+                    total = sum(len(m.get("content", "")) for m in history)
+                    if total <= max_chars:
+                        break
+                    history = history[2:]  # 删掉最旧一轮
             CHAT_HISTORY[to_addr] = history
+            _save_chat_history()
         else:
             CHAT_HISTORY[to_addr] = []
+            _save_chat_history()
 
         send_reply(to_addr, "AI 回答", f"你的问题：{question}\n\n{answer}")
     except Exception as e:
@@ -476,7 +519,8 @@ def poll_mailbox(processed):
                     log(f"处理邮件出错: {e}")
     except Exception as e:
         log(f"连接邮箱失败: {e}")
-    return processed
+        return processed, False
+    return processed, True
 
 
 # ---------------- 启动 ----------------
@@ -488,9 +532,16 @@ def main():
     log(f"轮询间隔：{config.POLL_INTERVAL} 秒")
     log("=" * 50)
     processed = load_processed()
+    fail_streak = 0
     while True:
-        processed = poll_mailbox(processed)
-        time.sleep(config.POLL_INTERVAL)
+        processed, ok = poll_mailbox(processed)
+        if ok:
+            fail_streak = 0
+        else:
+            fail_streak += 1
+        # 连接失败时逐步退避，最长 3 分钟
+        delay = min(config.POLL_INTERVAL * (fail_streak + 1), 180)
+        time.sleep(delay)
 
 
 if __name__ == "__main__":

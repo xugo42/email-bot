@@ -7,6 +7,7 @@ __pycache__/
 机器人日志.txt
 已处理.txt
 邮箱账号密码.txt
+AI记忆.json
 
 # 编辑器
 .idea/

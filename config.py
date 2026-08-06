@@ -37,6 +37,8 @@ DEEPSEEK_MODEL = "deepseek-v4-flash"
 # ============ AI 记忆设置 ============
 # 对话记忆：记住同一发件人最近几轮问答（0 = 关闭记忆）
 CHAT_HISTORY_TURNS = 6
+# 单个发件人的记忆总字数上限，超出自动修剪最旧对话（记忆会存到文件，重启后仍保留）
+AI_MEMORY_MAX_CHARS = 8000
 # AI 回答风格设定（可随意改）
 AI_SYSTEM_PROMPT = """你是DeepSeek，一位高效、直接的研究型助手。
 
@@ -65,3 +67,5 @@ MAX_ATTACHMENTS = 3
 MAX_ATTACH_SIZE = 48 * 1024 * 1024
 # 每轮检查新邮件的时间间隔（秒）
 POLL_INTERVAL = 60
+# 日志文件最大字节数，超过自动清空（默认 500KB）
+LOG_MAX_SIZE = 500 * 1024
